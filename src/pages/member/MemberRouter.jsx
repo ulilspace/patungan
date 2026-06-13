@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { getMemberByToken, subscribeBill } from '../../firebase/bills.js';
+import { getMemberByToken, subscribeBill, subscribeClaims } from '../../firebase/bills.js';
 import { auth } from '../../firebase/config.js';
 import { signInAnonymously } from 'firebase/auth';
 import IdentityConfirm from './IdentityConfirm.jsx';
 import ItemPicker from './ItemPicker.jsx';
 import WaitingRoom from './WaitingRoom.jsx';
 import FinalBill from './FinalBill.jsx';
+import MemberSummary from './MemberSummary.jsx';
 
 export default function MemberRouter() {
   const { billId, memberToken } = useParams();
   const [member, setMember] = useState(null);
   const [loading, setLoading] = useState(true);
   const [bill, setBill] = useState(null);
+  const [claims, setClaims] = useState([]);
+  const [claimsReady, setClaimsReady] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -26,21 +30,31 @@ export default function MemberRouter() {
 
   useEffect(() => {
     if (!billId) return;
-    const unsub = subscribeBill(billId, setBill);
-    return unsub;
+    return subscribeBill(billId, setBill);
   }, [billId]);
 
-  // Re-fetch member state periodically to detect state changes
+  // Re-fetch member periodically to detect state changes from host actions
   useEffect(() => {
     if (!billId || !memberToken) return;
     const interval = setInterval(async () => {
       const m = await getMemberByToken(billId, memberToken);
       if (m) setMember(m);
-    }, 3000);
+    }, 5000);
     return () => clearInterval(interval);
   }, [billId, memberToken]);
 
-  if (loading) return (
+  // Subscribe to claims only for individual bills once member is loaded
+  useEffect(() => {
+    if (!billId || !member?.id) return;
+    if (bill && bill.billType !== 'individual') { setClaimsReady(true); return; }
+    const unsub = subscribeClaims(billId, member.id, data => {
+      setClaims(data);
+      setClaimsReady(true);
+    });
+    return unsub;
+  }, [billId, member?.id, bill?.billType]);
+
+  if (loading || (bill?.billType === 'individual' && !claimsReady)) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
         <div className="text-4xl mb-3">🧾</div>
@@ -60,9 +74,39 @@ export default function MemberRouter() {
   );
 
   const state = member.state;
-  if (state === 'pending' || state === 'identified') return <IdentityConfirm member={member} billId={billId} onStateChange={setMember} />;
+
+  if (state === 'pending' || state === 'identified') {
+    return <IdentityConfirm member={member} billId={billId} onStateChange={setMember} />;
+  }
+
+  // Individual bill flow: claim-based
+  if (bill?.billType === 'individual' && (state === 'selecting' || state === 'confirmed')) {
+    if (showPicker || claims.length === 0) {
+      return (
+        <ItemPicker
+          member={member}
+          billId={billId}
+          bill={bill}
+          onStateChange={setMember}
+          onClaimSaved={() => setShowPicker(false)}
+        />
+      );
+    }
+    return (
+      <MemberSummary
+        member={member}
+        billId={billId}
+        bill={bill}
+        claims={claims}
+        onNewClaim={() => setShowPicker(true)}
+      />
+    );
+  }
+
+  // Shared bill flow
   if (state === 'selecting') return <ItemPicker member={member} billId={billId} bill={bill} onStateChange={setMember} />;
   if (state === 'confirmed') return <WaitingRoom member={member} billId={billId} bill={bill} />;
-  if (state === 'paid') return <FinalBill member={member} billId={billId} bill={bill} />;
+  if (state === 'billed' || state === 'paid') return <FinalBill member={member} billId={billId} bill={bill} />;
+
   return <IdentityConfirm member={member} billId={billId} onStateChange={setMember} />;
 }

@@ -36,14 +36,14 @@ export default function AddMembers() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-amber-50 p-4">
       <div className="max-w-md mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => navigate(-1)} className="text-gray-500">←</button>
           <h1 className="text-xl font-bold text-gray-800">Tambah Anggota</h1>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm p-6 mb-4">
+        <div className="bg-white border border-dashed border-amber-200 rounded-lg shadow-sm p-6 mb-4">
           <div className="flex gap-2">
             <input
               className="flex-1 border rounded-xl px-3 py-2 text-sm"

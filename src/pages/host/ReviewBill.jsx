@@ -13,7 +13,11 @@ export default function ReviewBill() {
   const [title, setTitle] = useState(parsed?.title || '');
   const [items, setItems] = useState(parsed?.items || []);
   const [tax, setTax] = useState(parsed?.tax || 0);
+  const [taxType] = useState(parsed?.taxType || 'flat');
+  const [taxRate] = useState(parsed?.taxRate || 0);
   const [serviceCharge, setServiceCharge] = useState(parsed?.serviceCharge || 0);
+  const [serviceType] = useState(parsed?.serviceType || 'flat');
+  const [serviceRate] = useState(parsed?.serviceRate || 0);
   const [grandTotal, setGrandTotal] = useState(parsed?.grandTotal || 0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -40,13 +44,21 @@ export default function ReviewBill() {
     setLoading(true);
     try {
       await saveItems(billId, items);
-      await updateBill(billId, {
+      const billData = {
         title,
         tax: Number(tax),
+        taxType,
+        taxRate: Number(taxRate),
         serviceCharge: Number(serviceCharge),
+        serviceType,
+        serviceRate: Number(serviceRate),
         subtotal,
         grandTotal: Number(grandTotal) || subtotal + Number(tax) + Number(serviceCharge),
-      });
+      };
+      if (parsed?.receiptImageUrl) {
+        billData.receiptImageUrl = parsed.receiptImageUrl;
+      }
+      await updateBill(billId, billData);
       navigate('/host/type');
     } catch (err) {
       setError('Gagal menyimpan: ' + err.message);
@@ -55,14 +67,14 @@ export default function ReviewBill() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-amber-50 p-4">
       <div className="max-w-md mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => navigate(-1)} className="text-gray-500">←</button>
           <h1 className="text-xl font-bold text-gray-800">Review Tagihan</h1>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+        <div className="bg-white rounded-lg border border-dashed border-amber-200 shadow-sm p-6 space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Judul Tagihan</label>
             <input

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useItems } from '../../hooks/useItems.js';
 import { useMembers } from '../../hooks/useMembers.js';
-import { saveSelections, updateMember, claimItem } from '../../firebase/bills.js';
+import { saveSelections, updateMember, claimItem, saveClaim } from '../../firebase/bills.js';
+import { calcExtrasForSubtotal } from '../../utils/splitCalculator.js';
 import { formatIDR } from '../../utils/currency.js';
 
-export default function ItemPicker({ member, billId, bill, onStateChange }) {
+export default function ItemPicker({ member, billId, bill, onStateChange, onClaimSaved }) {
   const { items } = useItems(billId);
   const { members } = useMembers(billId);
   const [selected, setSelected] = useState(new Set());
@@ -44,9 +45,26 @@ export default function ItemPicker({ member, billId, bill, onStateChange }) {
     if (selected.size === 0) { showToast('Pilih minimal 1 item'); return; }
     setSaving(true);
     try {
-      await saveSelections(billId, member.id, member.name, [...selected]);
-      await updateMember(billId, member.id, { state: 'confirmed' });
-      onStateChange({ ...member, state: 'confirmed' });
+      if (bill?.billType === 'individual') {
+        const claimedItems = [...selected].map(id => {
+          const item = items.find(i => i.id === id);
+          return { id, name: item.name, price: item.price };
+        });
+        const subtotal = claimedItems.reduce((s, i) => s + i.price, 0);
+        const extras = calcExtrasForSubtotal(bill, subtotal);
+        await saveClaim(billId, member.id, {
+          items: claimedItems,
+          subtotal,
+          taxShare: extras.tax,
+          serviceShare: extras.service,
+          total: subtotal + extras.total,
+        });
+        if (onClaimSaved) onClaimSaved();
+      } else {
+        await saveSelections(billId, member.id, member.name, [...selected]);
+        await updateMember(billId, member.id, { state: 'confirmed' });
+        onStateChange({ ...member, state: 'confirmed' });
+      }
     } catch (e) {
       showToast('Gagal menyimpan: ' + e.message);
       setSaving(false);
@@ -58,11 +76,13 @@ export default function ItemPicker({ member, billId, bill, onStateChange }) {
     return s + (item?.price || 0);
   }, 0);
 
+  const sortedItems = [...items].sort((a, b) => a.name.localeCompare(b.name));
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <div className="bg-white border-b border-gray-100 px-6 py-4">
+    <div className="min-h-screen bg-amber-50 flex flex-col">
+      <div className="bg-white border-b border-dashed border-amber-200 px-6 py-4">
         <h1 className="text-lg font-bold text-gray-800">{bill?.title || 'Pilih Pesanan'}</h1>
-        <p className="text-xs text-gray-400">Halo {member.name}, pilih yang kamu pesan</p>
+        <p className="text-xs text-amber-700 uppercase tracking-widest">Halo {member.name}, pilih yang kamu pesan</p>
       </div>
 
       {toast && (
@@ -70,16 +90,16 @@ export default function ItemPicker({ member, billId, bill, onStateChange }) {
       )}
 
       <div className="flex-1 p-6 space-y-2 pb-36 max-w-lg mx-auto w-full">
-        {items.map(item => {
+        {sortedItems.map(item => {
           const isClaimed = bill?.billType === 'individual' && item.claimedBy && item.claimedBy !== member.id;
           const isSelected = selected.has(item.id);
           return (
             <div
               key={item.id}
               onClick={() => !isClaimed && handleToggle(item)}
-              className={`flex items-center justify-between p-3 rounded-xl border transition-all
-                ${isClaimed ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-100' : 'cursor-pointer'}
-                ${isSelected ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white hover:border-gray-300'}
+              className={`flex items-center justify-between p-3 rounded-lg border-b border-dashed transition-all
+                ${isClaimed ? 'opacity-50 cursor-not-allowed bg-gray-50 border-amber-100' : 'cursor-pointer'}
+                ${isSelected ? 'border-green-500 bg-green-50' : 'border-amber-100 bg-white hover:bg-amber-50'}
               `}
             >
               <div>

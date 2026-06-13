@@ -26,8 +26,8 @@ export default function FinalBill({ member, billId, bill }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <div className="bg-white border-b border-gray-100 px-6 py-4">
+    <div className="min-h-screen bg-amber-50 flex flex-col">
+      <div className="bg-white border-b border-dashed border-amber-200 px-6 py-4">
         <h1 className="text-lg font-bold text-gray-800">Tagihan Kamu</h1>
         <p className="text-xs text-gray-400">{member?.name} · {bill?.title}</p>
       </div>
@@ -35,10 +35,10 @@ export default function FinalBill({ member, billId, bill }) {
       <div className="flex-1 p-6 space-y-4 max-w-lg mx-auto w-full pb-32">
         {myResult ? (
           <>
-            <div className="bg-white rounded-2xl p-4 shadow-sm space-y-2">
-              <h3 className="font-semibold text-gray-800 mb-2">Pesananmu</h3>
+            <div className="bg-white border border-dashed border-amber-200 rounded-lg shadow-sm p-4 space-y-2">
+              <h3 className="text-xs font-medium text-amber-700 uppercase tracking-widest mb-2">Pesananmu</h3>
               {myResult.items.map((item, i) => (
-                <div key={i} className="flex justify-between text-sm py-1.5 border-b border-gray-50 last:border-0">
+                <div key={i} className="flex justify-between text-sm py-1.5 border-b border-dashed border-amber-50 last:border-0">
                   <span className="text-gray-700">{item.name}</span>
                   <span className="font-medium">{formatIDR(item.sharedPrice || item.price)}</span>
                 </div>

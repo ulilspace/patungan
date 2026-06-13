@@ -1,5 +1,5 @@
 import { db } from './config.js';
-import { doc, collection, addDoc, setDoc, getDoc, getDocs, updateDoc, onSnapshot, serverTimestamp, query, where } from 'firebase/firestore';
+import { doc, collection, addDoc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, where } from 'firebase/firestore';
 
 export async function createBill(billId, hostName) {
   await setDoc(doc(db, 'bills', billId), {
@@ -100,4 +100,38 @@ export async function claimItem(billId, itemId, memberId, memberName) {
     claimedBy: memberId,
     claimedByName: memberName,
   });
+}
+
+export async function saveClaim(billId, memberId, claimData) {
+  const colRef = collection(db, 'bills', billId, 'members', memberId, 'claims');
+  const ref = await addDoc(colRef, { ...claimData, status: 'summary', createdAt: serverTimestamp() });
+  return ref.id;
+}
+
+export async function getClaims(billId, memberId) {
+  const snap = await getDocs(collection(db, 'bills', billId, 'members', memberId, 'claims'));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+}
+
+export function subscribeClaims(billId, memberId, callback) {
+  return onSnapshot(collection(db, 'bills', billId, 'members', memberId, 'claims'), snap => {
+    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)));
+  });
+}
+
+export async function updateClaim(billId, memberId, claimId, data) {
+  await updateDoc(doc(db, 'bills', billId, 'members', memberId, 'claims', claimId), data);
+}
+
+export async function deleteMember(billId, memberId) {
+  await deleteDoc(doc(db, 'bills', billId, 'members', memberId));
+}
+
+export async function getBillsByIds(billIds) {
+  const results = [];
+  for (const id of billIds) {
+    const snap = await getDoc(doc(db, 'bills', id));
+    if (snap.exists()) results.push({ id: snap.id, ...snap.data() });
+  }
+  return results;
 }

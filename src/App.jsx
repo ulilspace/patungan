@@ -7,6 +7,7 @@ import TransferDetails from './pages/host/TransferDetails.jsx'
 import AddMembers from './pages/host/AddMembers.jsx'
 import Publish from './pages/host/Publish.jsx'
 import Dashboard from './pages/host/Dashboard.jsx'
+import BillList from './pages/host/BillList.jsx'
 import MemberRouter from './pages/member/MemberRouter.jsx'
 import NotFound from './pages/shared/NotFound.jsx'
 
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/host/members" element={<AddMembers />} />
         <Route path="/host/publish" element={<Publish />} />
         <Route path="/host/dashboard/:billId" element={<Dashboard />} />
+        <Route path="/host/bills" element={<BillList />} />
         <Route path="/member/:billId/:memberToken" element={<MemberRouter />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
