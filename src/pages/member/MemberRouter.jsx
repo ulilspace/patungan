@@ -14,6 +14,7 @@ export default function MemberRouter() {
   const [member, setMember] = useState(null);
   const [loading, setLoading] = useState(true);
   const [bill, setBill] = useState(null);
+  const [billReady, setBillReady] = useState(false);
   const [claims, setClaims] = useState([]);
   const [claimsReady, setClaimsReady] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -30,7 +31,11 @@ export default function MemberRouter() {
 
   useEffect(() => {
     if (!billId) return;
-    return subscribeBill(billId, setBill);
+    const unsub = subscribeBill(billId, (data) => {
+      setBill(data);
+      setBillReady(true);
+    });
+    return unsub;
   }, [billId]);
 
   // Re-fetch member periodically to detect state changes from host actions
@@ -54,7 +59,7 @@ export default function MemberRouter() {
     return unsub;
   }, [billId, member?.id, bill?.billType]);
 
-  if (loading || (bill?.billType === 'individual' && !claimsReady)) return (
+  if (loading || !billReady || (bill?.billType === 'individual' && !claimsReady)) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
         <div className="text-4xl mb-3">🧾</div>

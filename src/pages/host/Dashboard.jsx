@@ -9,6 +9,7 @@ import { formatIDR } from '../../utils/currency.js';
 import { buildWhatsAppMessage, openWhatsApp } from '../../utils/whatsapp.js';
 import { buildInviteUrl, generateMemberToken } from '../../utils/tokenGenerator.js';
 import StatusBadge from '../../components/StatusBadge.jsx';
+import MemberDetail from './MemberDetail.jsx';
 import { serverTimestamp } from 'firebase/firestore';
 
 function Spinner() {
@@ -36,6 +37,7 @@ export default function Dashboard() {
   const [newMemberLink, setNewMemberLink] = useState('');
   const [copiedLink, setCopiedLink] = useState('');
   const [deletingMember, setDeletingMember] = useState(null);
+  const [selectedMember, setSelectedMember] = useState(null);
 
   useEffect(() => {
     if (bill?.splitResult) setSplitResult(bill.splitResult);
@@ -168,9 +170,23 @@ export default function Dashboard() {
             {members.map(m => (
               <div key={m.id} className="border-b border-dashed border-amber-50 last:border-0 py-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-800">{m.name}</span>
+                  <span
+                    className={`text-sm font-medium text-gray-800 ${bill.billType === 'individual' ? 'cursor-pointer hover:text-amber-700' : ''}`}
+                    onClick={() => bill.billType === 'individual' && setSelectedMember(m)}
+                  >
+                    {m.name}
+                  </span>
                   <div className="flex items-center gap-2">
                     <StatusBadge state={m.state} />
+                    {bill.billType === 'individual' && (
+                      <span
+                        className="text-gray-400 cursor-pointer hover:text-amber-600 px-1"
+                        onClick={() => setSelectedMember(m)}
+                        title="Lihat detail klaim"
+                      >
+                        ›
+                      </span>
+                    )}
                     <button
                       onClick={() => copyLink(buildInviteUrl(billId, m.token))}
                       className="text-xs text-blue-400 hover:text-blue-600 px-1"
@@ -324,6 +340,15 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {selectedMember && (
+        <MemberDetail
+          billId={billId}
+          member={selectedMember}
+          bill={bill}
+          onClose={() => setSelectedMember(null)}
+        />
+      )}
     </div>
   );
 }
