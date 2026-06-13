@@ -1,21 +1,10 @@
-import { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useBill } from '../../hooks/useBill.js';
 import { useMembers } from '../../hooks/useMembers.js';
 import StatusBadge from '../../components/StatusBadge.jsx';
 
-export default function WaitingRoom() {
-  const { billId } = useParams();
-  const navigate = useNavigate();
-  const { bill } = useBill(billId);
+export default function WaitingRoom({ member, billId, bill }) {
   const { members } = useMembers(billId);
 
-  useEffect(() => {
-    if (bill?.state === 'closed') {
-      navigate(`/member/${billId}/final`);
-    }
-  }, [bill, billId, navigate]);
-
+  // MemberRouter will re-render with new state when bill closes
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
       <div className="bg-white rounded-2xl p-8 shadow-sm text-center max-w-sm w-full space-y-6">
@@ -32,6 +21,9 @@ export default function WaitingRoom() {
             </div>
           ))}
         </div>
+        {bill?.state === 'closed' && (
+          <p className="text-green-600 text-sm font-medium">Tagihan ditutup! Memuat rincian...</p>
+        )}
       </div>
     </div>
   );

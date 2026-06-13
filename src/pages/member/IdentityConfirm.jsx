@@ -1,118 +1,70 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { signInAnonymously } from 'firebase/auth';
-import { auth } from '../../firebase/config';
-import { getBill, getMember, updateMember } from '../../firebase/bills';
+import { useState } from 'react';
+import { lockMemberIdentity } from '../../firebase/locks.js';
+import { updateMember, getBill } from '../../firebase/bills.js';
+import { auth } from '../../firebase/config.js';
 
-export default function IdentityConfirm() {
-  const { billId, memberToken } = useParams();
-  const navigate = useNavigate();
-  const [member, setMember] = useState(null);
-  const [bill, setBill] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [confirming, setConfirming] = useState(false);
+export default function IdentityConfirm({ member, billId, onStateChange }) {
+  const [loading, setLoading] = useState(false);
+  const [denied, setDenied] = useState(false);
   const [error, setError] = useState('');
+  const [billTitle, setBillTitle] = useState('');
 
-  useEffect(() => {
-    async function init() {
-      await signInAnonymously(auth);
-      const b = await getBill(billId);
-      if (!b || b.state === 'draft') {
-        setError('Tagihan belum siap.');
-        setLoading(false);
-        return;
-      }
-      setBill(b);
+  useState(() => {
+    getBill(billId).then(b => b && setBillTitle(b.title));
+  }, [billId]);
 
-      // Find member by token
-      const { getMembers } = await import('../../firebase/bills');
-      const members = await getMembers(billId);
-      const m = members.find(mem => mem.token === memberToken);
-      if (!m) {
-        setError('Link tidak valid.');
-        setLoading(false);
-        return;
-      }
-
-      // Already confirmed on another device
-      if (m.uid && m.uid !== auth.currentUser.uid) {
-        setError('Sesi ini sudah aktif di perangkat lain.');
-        setLoading(false);
-        return;
-      }
-
-      // Already confirmed on this device → go to appropriate page
-      if (m.uid && m.uid === auth.currentUser.uid) {
-        sessionStorage.setItem('memberId', m.id);
-        sessionStorage.setItem('memberName', m.name);
-        redirectByState(m.state, billId, b.type);
-        return;
-      }
-
-      setMember(m);
+  async function handleConfirm() {
+    setLoading(true);
+    try {
+      const uid = auth.currentUser?.uid;
+      if (!uid) throw new Error('Tidak terautentikasi');
+      await lockMemberIdentity(billId, member.id, uid);
+      await updateMember(billId, member.id, { state: 'selecting' });
+      onStateChange({ ...member, state: 'selecting' });
+    } catch (err) {
+      setError(err.message);
       setLoading(false);
     }
-    init();
-  }, [billId, memberToken]);
-
-  function redirectByState(state, bid, type) {
-    if (state === 'invited' || state === 'identity_confirmed' || state === 'selecting') {
-      navigate(`/member/${bid}/pick`);
-    } else if (state === 'order_confirmed' && type === 'shared') {
-      navigate(`/member/${bid}/waiting`);
-    } else if (state === 'billed' || state === 'order_confirmed' || state === 'transfer_confirmed') {
-      navigate(`/member/${bid}/final`);
-    } else {
-      navigate(`/member/${bid}/pick`);
-    }
   }
 
-  async function handleYes() {
-    setConfirming(true);
-    await updateMember(billId, member.id, {
-      uid: auth.currentUser.uid,
-      deviceBound: true,
-      state: 'identity_confirmed',
-    });
-    sessionStorage.setItem('memberId', member.id);
-    sessionStorage.setItem('memberName', member.name);
-    navigate(`/member/${billId}/pick`);
+  if (denied) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <div className="text-4xl mb-3">🙅</div>
+        <h1 className="text-xl font-bold text-gray-800 mb-2">Bukan Kamu?</h1>
+        <p className="text-gray-500 text-sm">Hubungi host untuk mendapat link undangan yang benar untukmu.</p>
+      </div>
+    );
   }
-
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Memuat...</div>;
-
-  if (error) return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
-      <div className="text-5xl mb-4">🔒</div>
-      <p className="text-gray-600">{error}</p>
-    </div>
-  );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
-      <div className="bg-white rounded-2xl p-8 shadow-sm text-center max-w-sm w-full space-y-6">
-        <div className="text-5xl">👋</div>
-        <div>
-          <p className="text-gray-500 text-sm mb-1">{bill?.title}</p>
-          <h2 className="text-2xl font-bold text-gray-800">Apakah kamu</h2>
-          <h2 className="text-2xl font-bold text-green-600">{member?.name}?</h2>
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="text-5xl mb-3">👋</div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-1">Halo!</h1>
+          {billTitle && <p className="text-sm text-gray-500 mb-2">Tagihan: {billTitle}</p>}
+          <p className="text-gray-600">Apakah kamu</p>
+          <p className="text-3xl font-bold text-green-600 mt-1">{member.name}?</p>
         </div>
+
+        {error && <div className="bg-red-50 text-red-600 text-sm rounded-xl px-4 py-3 mb-4">{error}</div>}
+
         <div className="space-y-3">
           <button
-            onClick={handleYes}
-            disabled={confirming}
-            className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 disabled:opacity-50"
+            onClick={handleConfirm}
+            disabled={loading}
+            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-semibold rounded-xl py-4 text-base"
           >
-            {confirming ? 'Mengonfirmasi...' : 'Ya, itu aku!'}
+            {loading ? 'Memproses...' : '✅ Ya, itu aku!'}
           </button>
           <button
-            onClick={() => navigate('/')}
-            className="w-full border border-gray-300 text-gray-600 py-3 rounded-xl text-sm hover:bg-gray-50"
+            onClick={() => setDenied(true)}
+            className="w-full bg-white hover:bg-gray-50 border border-gray-200 text-gray-600 font-medium rounded-xl py-4 text-base"
           >
-            Bukan aku
+            ❌ Bukan aku
           </button>
         </div>
-        {!confirming && <p className="text-xs text-gray-400">Link ini hanya untukmu. Jangan bagikan ke orang lain.</p>}
       </div>
     </div>
   );

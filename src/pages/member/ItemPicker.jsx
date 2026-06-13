@@ -1,17 +1,10 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useBill } from '../../hooks/useBill.js';
+import { useState } from 'react';
 import { useItems } from '../../hooks/useItems.js';
 import { useMembers } from '../../hooks/useMembers.js';
 import { saveSelections, updateMember, claimItem } from '../../firebase/bills.js';
 import { formatIDR } from '../../utils/currency.js';
 
-export default function ItemPicker() {
-  const { billId } = useParams();
-  const navigate = useNavigate();
-  const memberId = sessionStorage.getItem('memberId');
-  const memberName = sessionStorage.getItem('memberName');
-  const { bill } = useBill(billId);
+export default function ItemPicker({ member, billId, bill, onStateChange }) {
   const { items } = useItems(billId);
   const { members } = useMembers(billId);
   const [selected, setSelected] = useState(new Set());
@@ -31,11 +24,11 @@ export default function ItemPicker() {
       if (isSelected) {
         setSelected(prev => { const s = new Set(prev); s.delete(item.id); return s; });
       } else {
-        if (item.claimedBy && item.claimedBy !== memberId) {
+        if (item.claimedBy && item.claimedBy !== member.id) {
           showToast(`Sudah diambil oleh ${item.claimedByName}`);
           return;
         }
-        await claimItem(billId, item.id, memberId, memberName);
+        await claimItem(billId, item.id, member.id, member.name);
         setSelected(prev => new Set([...prev, item.id]));
       }
     } else {
@@ -51,9 +44,9 @@ export default function ItemPicker() {
     if (selected.size === 0) { showToast('Pilih minimal 1 item'); return; }
     setSaving(true);
     try {
-      await saveSelections(billId, memberId, memberName, [...selected]);
-      await updateMember(billId, memberId, { state: 'order_confirmed' });
-      navigate(`/member/${billId}/confirm`);
+      await saveSelections(billId, member.id, member.name, [...selected]);
+      await updateMember(billId, member.id, { state: 'confirmed' });
+      onStateChange({ ...member, state: 'confirmed' });
     } catch (e) {
       showToast('Gagal menyimpan: ' + e.message);
       setSaving(false);
@@ -65,13 +58,11 @@ export default function ItemPicker() {
     return s + (item?.price || 0);
   }, 0);
 
-  if (!bill) return <div className="min-h-screen flex items-center justify-center text-gray-400">Memuat...</div>;
-
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <div className="bg-white border-b border-gray-100 px-6 py-4">
-        <h1 className="text-lg font-bold text-gray-800">{bill.title}</h1>
-        <p className="text-xs text-gray-400">Pilih pesananmu, {memberName}</p>
+        <h1 className="text-lg font-bold text-gray-800">{bill?.title || 'Pilih Pesanan'}</h1>
+        <p className="text-xs text-gray-400">Halo {member.name}, pilih yang kamu pesan</p>
       </div>
 
       {toast && (
@@ -80,7 +71,7 @@ export default function ItemPicker() {
 
       <div className="flex-1 p-6 space-y-2 pb-36 max-w-lg mx-auto w-full">
         {items.map(item => {
-          const isClaimed = bill.billType === 'individual' && item.claimedBy && item.claimedBy !== memberId;
+          const isClaimed = bill?.billType === 'individual' && item.claimedBy && item.claimedBy !== member.id;
           const isSelected = selected.has(item.id);
           return (
             <div

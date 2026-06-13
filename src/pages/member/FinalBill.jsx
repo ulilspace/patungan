@@ -1,30 +1,22 @@
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { useBill } from '../../hooks/useBill.js';
+import { useState } from 'react';
 import { updateMember } from '../../firebase/bills.js';
 import { formatIDR } from '../../utils/currency.js';
 
-export default function FinalBill() {
-  const { billId } = useParams();
-  const { bill } = useBill(billId);
-  const memberId = sessionStorage.getItem('memberId');
-  const memberName = sessionStorage.getItem('memberName');
+export default function FinalBill({ member, billId, bill }) {
   const [confirming, setConfirming] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
+  const [confirmed, setConfirmed] = useState(member?.state === 'paid');
 
   const splitResult = bill?.splitResult;
-  const myResult = splitResult?.[memberId];
+  const myResult = splitResult?.[member?.id];
 
   async function handleConfirmTransfer() {
     setConfirming(true);
-    await updateMember(billId, memberId, { state: 'transfer_confirmed' });
+    await updateMember(billId, member.id, { state: 'paid' });
     setConfirmed(true);
     setConfirming(false);
   }
 
-  if (!bill) return <div className="min-h-screen flex items-center justify-center text-gray-400">Memuat...</div>;
-
-  if (bill.state !== 'closed' && !myResult) {
+  if (bill?.state !== 'closed' && !myResult) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
         <div className="text-5xl mb-4">⏳</div>
@@ -37,7 +29,7 @@ export default function FinalBill() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <div className="bg-white border-b border-gray-100 px-6 py-4">
         <h1 className="text-lg font-bold text-gray-800">Tagihan Kamu</h1>
-        <p className="text-xs text-gray-400">{memberName} · {bill.title}</p>
+        <p className="text-xs text-gray-400">{member?.name} · {bill?.title}</p>
       </div>
 
       <div className="flex-1 p-6 space-y-4 max-w-lg mx-auto w-full pb-32">
@@ -63,7 +55,7 @@ export default function FinalBill() {
               </div>
             </div>
 
-            {bill.transfer && (
+            {bill?.transfer && (
               <div className="bg-green-50 border border-green-200 rounded-2xl p-4 space-y-1">
                 <p className="text-sm font-semibold text-gray-700">Transfer ke:</p>
                 <p className="text-lg font-bold text-gray-800">🏦 {bill.transfer.bankName}</p>
