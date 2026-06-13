@@ -1,3 +1,18 @@
+export function calcExtrasForSubtotal(bill, subtotal) {
+  let tax = 0, service = 0;
+  if (bill.taxType === 'percent' && bill.taxRate > 0) {
+    tax = subtotal * bill.taxRate / 100;
+  } else {
+    tax = bill.tax || 0;
+  }
+  if (bill.serviceType === 'percent' && bill.serviceRate > 0) {
+    service = subtotal * bill.serviceRate / 100;
+  } else {
+    service = bill.serviceCharge || 0;
+  }
+  return { tax, service, total: tax + service };
+}
+
 export function calculateSplit(bill, items, members, selections) {
   const memberMap = {};
   members.forEach(m => { memberMap[m.id] = { ...m, itemsTotal: 0, items: [] }; });

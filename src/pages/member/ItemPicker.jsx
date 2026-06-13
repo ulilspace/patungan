@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useItems } from '../../hooks/useItems.js';
 import { useMembers } from '../../hooks/useMembers.js';
-import { saveSelections, updateMember, claimItem } from '../../firebase/bills.js';
+import { saveSelections, updateMember, claimItem, saveClaim } from '../../firebase/bills.js';
+import { calcExtrasForSubtotal } from '../../utils/splitCalculator.js';
 import { formatIDR } from '../../utils/currency.js';
 
-export default function ItemPicker({ member, billId, bill, onStateChange }) {
+export default function ItemPicker({ member, billId, bill, onStateChange, onClaimSaved }) {
   const { items } = useItems(billId);
   const { members } = useMembers(billId);
   const [selected, setSelected] = useState(new Set());
@@ -44,9 +45,26 @@ export default function ItemPicker({ member, billId, bill, onStateChange }) {
     if (selected.size === 0) { showToast('Pilih minimal 1 item'); return; }
     setSaving(true);
     try {
-      await saveSelections(billId, member.id, member.name, [...selected]);
-      await updateMember(billId, member.id, { state: 'confirmed' });
-      onStateChange({ ...member, state: 'confirmed' });
+      if (bill?.billType === 'individual') {
+        const claimedItems = [...selected].map(id => {
+          const item = items.find(i => i.id === id);
+          return { id, name: item.name, price: item.price };
+        });
+        const subtotal = claimedItems.reduce((s, i) => s + i.price, 0);
+        const extras = calcExtrasForSubtotal(bill, subtotal);
+        await saveClaim(billId, member.id, {
+          items: claimedItems,
+          subtotal,
+          taxShare: extras.tax,
+          serviceShare: extras.service,
+          total: subtotal + extras.total,
+        });
+        if (onClaimSaved) onClaimSaved();
+      } else {
+        await saveSelections(billId, member.id, member.name, [...selected]);
+        await updateMember(billId, member.id, { state: 'confirmed' });
+        onStateChange({ ...member, state: 'confirmed' });
+      }
     } catch (e) {
       showToast('Gagal menyimpan: ' + e.message);
       setSaving(false);

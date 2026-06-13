@@ -101,3 +101,24 @@ export async function claimItem(billId, itemId, memberId, memberName) {
     claimedByName: memberName,
   });
 }
+
+export async function saveClaim(billId, memberId, claimData) {
+  const colRef = collection(db, 'bills', billId, 'members', memberId, 'claims');
+  const ref = await addDoc(colRef, { ...claimData, status: 'summary', createdAt: serverTimestamp() });
+  return ref.id;
+}
+
+export async function getClaims(billId, memberId) {
+  const snap = await getDocs(collection(db, 'bills', billId, 'members', memberId, 'claims'));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+}
+
+export function subscribeClaims(billId, memberId, callback) {
+  return onSnapshot(collection(db, 'bills', billId, 'members', memberId, 'claims'), snap => {
+    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)));
+  });
+}
+
+export async function updateClaim(billId, memberId, claimId, data) {
+  await updateDoc(doc(db, 'bills', billId, 'members', memberId, 'claims', claimId), data);
+}

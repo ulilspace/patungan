@@ -15,7 +15,7 @@ export async function parseBillImage(base64Image, mimeType) {
         role: 'user',
         content: [
           { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64Image } },
-          { type: 'text', text: `You are a bill parser. Extract all information from this receipt image.\nReturn ONLY a JSON object with NO markdown or preamble:\n{\n  "restaurantName": "string or null",\n  "suggestedTitle": "string",\n  "items": [{ "name": "string", "qty": number, "unitPrice": number }],\n  "subtotal": number,\n  "tax": number,\n  "serviceCharge": number,\n  "grandTotal": number\n}\nAll prices as plain integers. No symbols or commas.` }
+          { type: 'text', text: `You are a bill parser. Extract all information from this receipt image.\nReturn ONLY a JSON object with NO markdown or preamble:\n{\n  "restaurantName": "string or null",\n  "suggestedTitle": "string",\n  "items": [{ "name": "string", "qty": number, "unitPrice": number }],\n  "subtotal": number,\n  "tax": number,\n  "taxType": "percent" or "flat",\n  "taxRate": number,\n  "serviceCharge": number,\n  "serviceType": "percent" or "flat",\n  "serviceRate": number,\n  "grandTotal": number\n}\nFor taxType/serviceType: use "percent" if the receipt shows a percentage (e.g. "PB1 10%" or "Service 5%"), use "flat" if it is a fixed amount with no percentage shown.\nFor taxRate/serviceRate: if percent, put the percentage number (e.g. 10 for 10%); if flat, put the same amount as tax/serviceCharge.\nAll prices as plain integers. No symbols or commas.` }
         ]
       }]
     })

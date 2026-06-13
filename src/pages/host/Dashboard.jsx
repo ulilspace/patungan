@@ -4,7 +4,7 @@ import { useBill } from '../../hooks/useBill.js';
 import { useMembers } from '../../hooks/useMembers.js';
 import { useItems } from '../../hooks/useItems.js';
 import { updateBill, updateMember, getSelections } from '../../firebase/bills.js';
-import { calculateSplit } from '../../utils/splitCalculator.js';
+import { calculateSplit, calcExtrasForSubtotal } from '../../utils/splitCalculator.js';
 import { formatIDR } from '../../utils/currency.js';
 import { buildWhatsAppMessage, openWhatsApp } from '../../utils/whatsapp.js';
 import StatusBadge from '../../components/StatusBadge.jsx';
@@ -26,7 +26,7 @@ export default function Dashboard() {
   if (!bill) return <div className="min-h-screen flex items-center justify-center text-gray-400">Tagihan tidak ditemukan</div>;
 
   const allConfirmed = members.length > 0 && members.every(m =>
-    m.state === 'order_confirmed' || m.state === 'billed' || m.state === 'transfer_confirmed' || m.state === 'confirmed'
+    m.state === 'order_confirmed' || m.state === 'billed' || m.state === 'transfer_confirmed' || m.state === 'confirmed' || m.state === 'paid'
   );
 
   async function handleClose() {
