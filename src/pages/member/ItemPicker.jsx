@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useItems } from '../../hooks/useItems.js';
 import { useMembers } from '../../hooks/useMembers.js';
-import { saveSelections, updateMember, claimItemAtomic, saveClaim, getClaims } from '../../firebase/bills.js';
+import { saveSelections, updateMember, claimItemAtomic, saveClaim, getClaims, unclaimItem } from '../../firebase/bills.js';
 import { calcExtrasForSubtotal } from '../../utils/splitCalculator.js';
 import { formatIDR } from '../../utils/currency.js';
 
@@ -30,10 +30,18 @@ export default function ItemPicker({ member, billId, bill, onStateChange, onClai
   async function handleToggle(item) {
     if (!bill || bill.state === 'closed') return;
     const isSelected = selected.has(item.id);
+    const isClaimed = bill.billType === 'individual' && item.claimedBy && item.claimedBy !== member.id;
 
     if (bill.billType === 'individual') {
+      // Show toast if item already taken by someone else
+      if (isClaimed) {
+        showToast(`Item sudah diambil oleh ${item.claimedByName}`);
+        return;
+      }
       if (isSelected) {
+        // Deselect: release claim in Firestore so others can take it
         setSelected(prev => { const s = new Set(prev); s.delete(item.id); return s; });
+        await unclaimItem(billId, item.id);
       } else {
         setClaiming(item.id);
         try {
@@ -111,7 +119,7 @@ export default function ItemPicker({ member, billId, bill, onStateChange, onClai
           return (
             <div
               key={item.id}
-              onClick={() => !isClaimed && !isClaiming && !isAlreadyPaid && handleToggle(item)}
+              onClick={() => !isClaiming && !isAlreadyPaid && handleToggle(item)}
               className={`flex items-center justify-between p-3 rounded-lg border-b border-dashed transition-all
                 ${isClaimed ? 'opacity-50 cursor-not-allowed bg-gray-50 border-amber-100' : ''}
                 ${isAlreadyPaid ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-100' : ''}
