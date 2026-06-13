@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /bills/{billId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update: if request.auth.uid == resource.data.hostUid;
+      allow delete: if false;
+
+      match /items/{itemId} {
+        allow read: if true;
+        allow write: if request.auth.uid == get(/databases/$(database)/documents/bills/$(billId)).data.hostUid;
+      }
+
+      match /members/{memberId} {
+        allow read: if true;
+        allow create: if request.auth.uid == get(/databases/$(database)/documents/bills/$(billId)).data.hostUid;
+        allow update: if request.auth.uid == resource.data.uid
+                      || request.auth.uid == get(/databases/$(database)/documents/bills/$(billId)).data.hostUid;
+      }
+
+      match /selections/{memberId} {
+        allow read: if true;
+        allow create: if request.auth.uid == get(/databases/$(database)/documents/bills/$(billId)/members/$(memberId)).data.uid;
+        allow update: if request.auth.uid == get(/databases/$(database)/documents/bills/$(billId)/members/$(memberId)).data.uid
+                      && get(/databases/$(database)/documents/bills/$(billId)/members/$(memberId)).data.state != "order_confirmed";
+      }
+
+      match /claims/{itemId} {
+        allow read: if true;
+        allow write: if request.auth != null;
+      }
+    }
+  }
+}
