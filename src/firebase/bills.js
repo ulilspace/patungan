@@ -102,6 +102,13 @@ export async function claimItem(billId, itemId, memberId, memberName) {
   });
 }
 
+export async function unclaimItem(billId, itemId) {
+  await updateDoc(doc(db, 'bills', billId, 'items', itemId), {
+    claimedBy: null,
+    claimedByName: null,
+  });
+}
+
 export async function claimItemAtomic(billId, itemId, memberId, memberName) {
   const itemRef = doc(db, 'bills', billId, 'items', itemId);
   await runTransaction(db, async (transaction) => {
