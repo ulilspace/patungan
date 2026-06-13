@@ -76,11 +76,13 @@ export default function ItemPicker({ member, billId, bill, onStateChange, onClai
     return s + (item?.price || 0);
   }, 0);
 
+  const sortedItems = [...items].sort((a, b) => a.name.localeCompare(b.name));
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <div className="bg-white border-b border-gray-100 px-6 py-4">
+    <div className="min-h-screen bg-amber-50 flex flex-col">
+      <div className="bg-white border-b border-dashed border-amber-200 px-6 py-4">
         <h1 className="text-lg font-bold text-gray-800">{bill?.title || 'Pilih Pesanan'}</h1>
-        <p className="text-xs text-gray-400">Halo {member.name}, pilih yang kamu pesan</p>
+        <p className="text-xs text-amber-700 uppercase tracking-widest">Halo {member.name}, pilih yang kamu pesan</p>
       </div>
 
       {toast && (
@@ -88,16 +90,16 @@ export default function ItemPicker({ member, billId, bill, onStateChange, onClai
       )}
 
       <div className="flex-1 p-6 space-y-2 pb-36 max-w-lg mx-auto w-full">
-        {items.map(item => {
+        {sortedItems.map(item => {
           const isClaimed = bill?.billType === 'individual' && item.claimedBy && item.claimedBy !== member.id;
           const isSelected = selected.has(item.id);
           return (
             <div
               key={item.id}
               onClick={() => !isClaimed && handleToggle(item)}
-              className={`flex items-center justify-between p-3 rounded-xl border transition-all
-                ${isClaimed ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-100' : 'cursor-pointer'}
-                ${isSelected ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white hover:border-gray-300'}
+              className={`flex items-center justify-between p-3 rounded-lg border-b border-dashed transition-all
+                ${isClaimed ? 'opacity-50 cursor-not-allowed bg-gray-50 border-amber-100' : 'cursor-pointer'}
+                ${isSelected ? 'border-green-500 bg-green-50' : 'border-amber-100 bg-white hover:bg-amber-50'}
               `}
             >
               <div>

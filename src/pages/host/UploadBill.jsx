@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { parseBillImage, expandItems } from '../../services/claude.js';
+import { uploadReceiptImage } from '../../firebase/storage.js';
 
 export default function UploadBill() {
   const navigate = useNavigate();
@@ -44,14 +45,24 @@ export default function UploadBill() {
         try {
           const parsed = await parseBillImage(base64, mimeType);
           const items = expandItems(parsed.items || []);
-          sessionStorage.setItem('parsedBill', JSON.stringify({
+          const parsedBillData = {
             title: parsed.suggestedTitle || parsed.restaurantName || 'Tagihan',
             items,
             subtotal: parsed.subtotal || 0,
             tax: parsed.tax || 0,
             serviceCharge: parsed.serviceCharge || 0,
             grandTotal: parsed.grandTotal || 0,
-          }));
+          };
+          // Upload receipt image to Firebase Storage
+          if (billId && imageFile) {
+            try {
+              const receiptImageUrl = await uploadReceiptImage(billId, imageFile);
+              parsedBillData.receiptImageUrl = receiptImageUrl;
+            } catch (uploadErr) {
+              console.error('Failed to upload receipt image:', uploadErr);
+            }
+          }
+          sessionStorage.setItem('parsedBill', JSON.stringify(parsedBillData));
           navigate('/host/review');
         } catch (err) {
           setError('Gagal menganalisis struk: ' + err.message + '. Coba input manual.');
@@ -84,7 +95,7 @@ export default function UploadBill() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-amber-50 p-4">
       <div className="max-w-md mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => navigate('/')} className="text-gray-500 hover:text-gray-700">←</button>
@@ -92,7 +103,7 @@ export default function UploadBill() {
         </div>
 
         {!manualMode ? (
-          <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+          <div className="bg-white rounded-lg border border-dashed border-amber-200 shadow-sm p-6 space-y-4">
             <div
               onClick={() => fileRef.current?.click()}
               className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-green-400 hover:bg-green-50 transition-colors"
@@ -141,7 +152,7 @@ export default function UploadBill() {
             </button>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+          <div className="bg-white rounded-lg border border-dashed border-amber-200 shadow-sm p-6 space-y-4">
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-semibold text-gray-700">Input Manual</h2>
               <button onClick={() => setManualMode(false)} className="text-sm text-green-600">Pakai foto</button>

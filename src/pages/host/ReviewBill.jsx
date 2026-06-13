@@ -44,7 +44,7 @@ export default function ReviewBill() {
     setLoading(true);
     try {
       await saveItems(billId, items);
-      await updateBill(billId, {
+      const billData = {
         title,
         tax: Number(tax),
         taxType,
@@ -54,7 +54,11 @@ export default function ReviewBill() {
         serviceRate: Number(serviceRate),
         subtotal,
         grandTotal: Number(grandTotal) || subtotal + Number(tax) + Number(serviceCharge),
-      });
+      };
+      if (parsed?.receiptImageUrl) {
+        billData.receiptImageUrl = parsed.receiptImageUrl;
+      }
+      await updateBill(billId, billData);
       navigate('/host/type');
     } catch (err) {
       setError('Gagal menyimpan: ' + err.message);
@@ -63,14 +67,14 @@ export default function ReviewBill() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-amber-50 p-4">
       <div className="max-w-md mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => navigate(-1)} className="text-gray-500">←</button>
           <h1 className="text-xl font-bold text-gray-800">Review Tagihan</h1>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+        <div className="bg-white rounded-lg border border-dashed border-amber-200 shadow-sm p-6 space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Judul Tagihan</label>
             <input

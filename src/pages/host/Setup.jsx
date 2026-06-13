@@ -4,6 +4,7 @@ import { signInAnonymously } from 'firebase/auth';
 import { auth } from '../../firebase/config.js';
 import { createBill } from '../../firebase/bills.js';
 import { generateBillId } from '../../utils/tokenGenerator.js';
+import { addLocalBillId } from '../../utils/localBills.js';
 
 export default function Setup() {
   const navigate = useNavigate();
@@ -33,6 +34,7 @@ export default function Setup() {
       await signInAnonymously(auth);
       const billId = generateBillId();
       await createBill(billId, hostName.trim());
+      addLocalBillId(billId);
       sessionStorage.setItem('billId', billId);
       navigate(`/host/upload?billId=${billId}`);
     } catch (err) {
@@ -42,7 +44,7 @@ export default function Setup() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-amber-50 flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="text-6xl mb-3">🧾</div>
@@ -53,7 +55,7 @@ export default function Setup() {
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg p-6 space-y-4">
+        <div className="bg-white rounded-lg border border-dashed border-amber-200 shadow-sm p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Nama Kamu (Host)</label>
             <input
@@ -91,18 +93,24 @@ export default function Setup() {
           >
             {loading ? 'Memuat...' : '✨ Buat Tagihan Baru'}
           </button>
+          <button
+            onClick={() => navigate('/host/bills')}
+            className="w-full border border-dashed border-amber-400 text-amber-700 font-medium rounded-xl py-2.5 text-sm hover:bg-amber-50 transition-colors"
+          >
+            📋 Tagihan Saya
+          </button>
         </div>
 
         <div className="mt-6 grid grid-cols-3 gap-3 text-center">
-          <div className="bg-white rounded-xl p-3 shadow-sm">
+          <div className="bg-white rounded-lg border border-dashed border-amber-200 p-3 shadow-sm">
             <div className="text-2xl mb-1">📸</div>
             <p className="text-xs text-gray-600">Upload struk restoran</p>
           </div>
-          <div className="bg-white rounded-xl p-3 shadow-sm">
+          <div className="bg-white rounded-lg border border-dashed border-amber-200 p-3 shadow-sm">
             <div className="text-2xl mb-1">👥</div>
             <p className="text-xs text-gray-600">Tambah anggota grup</p>
           </div>
-          <div className="bg-white rounded-xl p-3 shadow-sm">
+          <div className="bg-white rounded-lg border border-dashed border-amber-200 p-3 shadow-sm">
             <div className="text-2xl mb-1">💰</div>
             <p className="text-xs text-gray-600">Hitung tagihan otomatis</p>
           </div>

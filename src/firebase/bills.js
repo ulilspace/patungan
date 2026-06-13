@@ -1,5 +1,5 @@
 import { db } from './config.js';
-import { doc, collection, addDoc, setDoc, getDoc, getDocs, updateDoc, onSnapshot, serverTimestamp, query, where } from 'firebase/firestore';
+import { doc, collection, addDoc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, where } from 'firebase/firestore';
 
 export async function createBill(billId, hostName) {
   await setDoc(doc(db, 'bills', billId), {
@@ -121,4 +121,17 @@ export function subscribeClaims(billId, memberId, callback) {
 
 export async function updateClaim(billId, memberId, claimId, data) {
   await updateDoc(doc(db, 'bills', billId, 'members', memberId, 'claims', claimId), data);
+}
+
+export async function deleteMember(billId, memberId) {
+  await deleteDoc(doc(db, 'bills', billId, 'members', memberId));
+}
+
+export async function getBillsByIds(billIds) {
+  const results = [];
+  for (const id of billIds) {
+    const snap = await getDoc(doc(db, 'bills', id));
+    if (snap.exists()) results.push({ id: snap.id, ...snap.data() });
+  }
+  return results;
 }
