@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useItems } from '../../hooks/useItems.js';
 import { useMembers } from '../../hooks/useMembers.js';
-import { saveSelections, updateMember, claimItem, saveClaim } from '../../firebase/bills.js';
+import { saveSelections, updateMember, claimItemAtomic, saveClaim, getClaims } from '../../firebase/bills.js';
 import { calcExtrasForSubtotal } from '../../utils/splitCalculator.js';
 import { formatIDR } from '../../utils/currency.js';
 
@@ -11,6 +11,16 @@ export default function ItemPicker({ member, billId, bill, onStateChange, onClai
   const [selected, setSelected] = useState(new Set());
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
+  const [claiming, setClaiming] = useState(null);
+  const [paidItemIds, setPaidItemIds] = useState(new Set());
+
+  useEffect(() => {
+    if (bill?.billType !== 'individual') return;
+    getClaims(billId, member.id).then(claims => {
+      const paid = claims.filter(c => c.status === 'paid').flatMap(c => c.items.map(i => i.id));
+      setPaidItemIds(new Set(paid));
+    });
+  }, [billId, member.id, bill?.billType]);
 
   function showToast(msg) {
     setToast(msg);
@@ -25,12 +35,15 @@ export default function ItemPicker({ member, billId, bill, onStateChange, onClai
       if (isSelected) {
         setSelected(prev => { const s = new Set(prev); s.delete(item.id); return s; });
       } else {
-        if (item.claimedBy && item.claimedBy !== member.id) {
-          showToast(`Sudah diambil oleh ${item.claimedByName}`);
-          return;
+        setClaiming(item.id);
+        try {
+          await claimItemAtomic(billId, item.id, member.id, member.name);
+          setSelected(prev => new Set([...prev, item.id]));
+          setClaiming(null);
+        } catch (err) {
+          setClaiming(null);
+          showToast(err.message);
         }
-        await claimItem(billId, item.id, member.id, member.name);
-        setSelected(prev => new Set([...prev, item.id]));
       }
     } else {
       setSelected(prev => {
@@ -93,22 +106,33 @@ export default function ItemPicker({ member, billId, bill, onStateChange, onClai
         {sortedItems.map(item => {
           const isClaimed = bill?.billType === 'individual' && item.claimedBy && item.claimedBy !== member.id;
           const isSelected = selected.has(item.id);
+          const isClaiming = claiming === item.id;
+          const isAlreadyPaid = paidItemIds.has(item.id);
           return (
             <div
               key={item.id}
-              onClick={() => !isClaimed && handleToggle(item)}
+              onClick={() => !isClaimed && !isClaiming && !isAlreadyPaid && handleToggle(item)}
               className={`flex items-center justify-between p-3 rounded-lg border-b border-dashed transition-all
-                ${isClaimed ? 'opacity-50 cursor-not-allowed bg-gray-50 border-amber-100' : 'cursor-pointer'}
-                ${isSelected ? 'border-green-500 bg-green-50' : 'border-amber-100 bg-white hover:bg-amber-50'}
+                ${isClaimed ? 'opacity-50 cursor-not-allowed bg-gray-50 border-amber-100' : ''}
+                ${isAlreadyPaid ? 'opacity-50 cursor-not-allowed bg-gray-100 border-gray-100' : ''}
+                ${!isClaimed && !isAlreadyPaid ? 'cursor-pointer' : ''}
+                ${isSelected && !isAlreadyPaid ? 'border-green-500 bg-green-50' : ''}
+                ${!isClaimed && !isSelected && !isAlreadyPaid ? 'border-amber-100 bg-white hover:bg-amber-50' : ''}
               `}
             >
               <div>
                 <div className="font-medium text-gray-800 text-sm">{item.name}</div>
                 {isClaimed && <div className="text-xs text-gray-400">Diambil oleh {item.claimedByName}</div>}
+                {isAlreadyPaid && <div className="text-xs text-gray-400">Sudah dibayar</div>}
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-sm font-semibold text-gray-700">{formatIDR(item.price)}</span>
-                {!isClaimed && (
+                {isClaiming ? (
+                  <svg className="animate-spin h-5 w-5 text-green-500" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                  </svg>
+                ) : !isClaimed && !isAlreadyPaid && (
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center
                     ${isSelected ? 'border-green-500 bg-green-500' : 'border-gray-300'}`}>
                     {isSelected && <span className="text-white text-xs">✓</span>}

@@ -1,5 +1,5 @@
 import { db } from './config.js';
-import { doc, collection, addDoc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, where } from 'firebase/firestore';
+import { doc, collection, addDoc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, where, runTransaction } from 'firebase/firestore';
 
 export async function createBill(billId, hostName) {
   await setDoc(doc(db, 'bills', billId), {
@@ -99,6 +99,19 @@ export async function claimItem(billId, itemId, memberId, memberName) {
   await updateDoc(doc(db, 'bills', billId, 'items', itemId), {
     claimedBy: memberId,
     claimedByName: memberName,
+  });
+}
+
+export async function claimItemAtomic(billId, itemId, memberId, memberName) {
+  const itemRef = doc(db, 'bills', billId, 'items', itemId);
+  await runTransaction(db, async (transaction) => {
+    const itemSnap = await transaction.get(itemRef);
+    if (!itemSnap.exists()) throw new Error('Item tidak ditemukan');
+    const data = itemSnap.data();
+    if (data.claimedBy && data.claimedBy !== memberId) {
+      throw new Error(`Sudah diambil oleh ${data.claimedByName}`);
+    }
+    transaction.update(itemRef, { claimedBy: memberId, claimedByName: memberName });
   });
 }
 
