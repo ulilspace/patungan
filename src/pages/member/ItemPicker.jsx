@@ -107,7 +107,9 @@ export default function ItemPicker({ member, billId, bill, onStateChange, onClai
       </div>
 
       {toast && (
-        <div className="mx-6 mt-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3">{toast}</div>
+        <div className="fixed top-4 left-4 right-4 z-50 bg-red-600 text-white text-sm rounded-xl px-4 py-3 shadow-lg text-center mx-auto max-w-lg">
+          {toast}
+        </div>
       )}
 
       <div className="flex-1 p-6 space-y-2 pb-36 max-w-lg mx-auto w-full">
