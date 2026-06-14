@@ -50,7 +50,11 @@ export default function UploadBill() {
             items,
             subtotal: parsed.subtotal || 0,
             tax: parsed.tax || 0,
+            taxRate: parsed.taxRate || 0,
+            taxBase: parsed.taxBase || 0,
             serviceCharge: parsed.serviceCharge || 0,
+            serviceRate: parsed.serviceRate || 0,
+            serviceBase: parsed.serviceBase || 0,
             grandTotal: parsed.grandTotal || 0,
           };
           // Upload receipt image to Firebase Storage

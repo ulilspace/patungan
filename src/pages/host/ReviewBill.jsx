@@ -13,11 +13,11 @@ export default function ReviewBill() {
   const [title, setTitle] = useState(parsed?.title || '');
   const [items, setItems] = useState(parsed?.items || []);
   const [tax, setTax] = useState(parsed?.tax || 0);
-  const [taxType] = useState(parsed?.taxType || 'flat');
   const [taxRate] = useState(parsed?.taxRate || 0);
+  const [taxBase] = useState(parsed?.taxBase || 0);
   const [serviceCharge, setServiceCharge] = useState(parsed?.serviceCharge || 0);
-  const [serviceType] = useState(parsed?.serviceType || 'flat');
   const [serviceRate] = useState(parsed?.serviceRate || 0);
+  const [serviceBase] = useState(parsed?.serviceBase || 0);
   const [grandTotal, setGrandTotal] = useState(parsed?.grandTotal || 0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -47,11 +47,11 @@ export default function ReviewBill() {
       const billData = {
         title,
         tax: Number(tax),
-        taxType,
         taxRate: Number(taxRate),
+        taxBase: Number(taxBase),
         serviceCharge: Number(serviceCharge),
-        serviceType,
         serviceRate: Number(serviceRate),
+        serviceBase: Number(serviceBase),
         subtotal,
         grandTotal: Number(grandTotal) || subtotal + Number(tax) + Number(serviceCharge),
       };

@@ -1,14 +1,25 @@
 export function calcExtrasForSubtotal(bill, subtotal) {
+  // DPP ratio: some items may be excluded from tax/service on the receipt.
+  // taxBase (DPP) is derived by Claude as: tax / (taxRate/100).
+  // We apply the same ratio to each member's subtotal so the split is accurate.
+  const billSubtotal = bill.subtotal || 0;
+  const dppRatio = (bill.taxBase && billSubtotal > 0) ? bill.taxBase / billSubtotal : 1;
+  const memberDpp = subtotal * dppRatio;
+
   let tax = 0, service = 0;
-  if (bill.taxType === 'percent' && bill.taxRate > 0) {
-    tax = subtotal * bill.taxRate / 100;
+  if (bill.taxRate > 0) {
+    tax = memberDpp * bill.taxRate / 100;
   } else {
-    tax = bill.tax || 0;
+    // Fall back to proportional share of flat amount
+    const ratio = billSubtotal > 0 ? subtotal / billSubtotal : 0;
+    tax = (bill.tax || 0) * ratio;
   }
-  if (bill.serviceType === 'percent' && bill.serviceRate > 0) {
-    service = subtotal * bill.serviceRate / 100;
+  if (bill.serviceRate > 0) {
+    const svcRatio = (bill.serviceBase && billSubtotal > 0) ? bill.serviceBase / billSubtotal : dppRatio;
+    service = subtotal * svcRatio * bill.serviceRate / 100;
   } else {
-    service = bill.serviceCharge || 0;
+    const ratio = billSubtotal > 0 ? subtotal / billSubtotal : 0;
+    service = (bill.serviceCharge || 0) * ratio;
   }
   return { tax, service, total: tax + service };
 }
@@ -38,12 +49,9 @@ export function calculateSplit(bill, items, members, selections) {
     });
   }
 
-  const subtotal = Object.values(memberMap).reduce((s, m) => s + m.itemsTotal, 0);
-  const extras = (bill.tax || 0) + (bill.serviceCharge || 0);
-
   const results = Object.values(memberMap).map(m => {
-    const ratio = subtotal > 0 ? m.itemsTotal / subtotal : 0;
-    const extraShare = extras * ratio;
+    const extras = calcExtrasForSubtotal(bill, m.itemsTotal);
+    const extraShare = extras.total;
     return { ...m, extraShare, total: m.itemsTotal + extraShare };
   });
 
