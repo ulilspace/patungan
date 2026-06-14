@@ -61,12 +61,46 @@ export default function MemberSummary({ member, billId, bill, claims, onNewClaim
               </div>
             ))}
 
-            {(claim.taxShare > 0 || claim.serviceShare > 0) && (
-              <div className="flex justify-between text-sm py-1 text-gray-500">
-                <span>Pajak & layanan</span>
-                <span>{formatIDR((claim.taxShare || 0) + (claim.serviceShare || 0))}</span>
-              </div>
-            )}
+            {/* Tax/service breakdown */}
+            {(() => {
+              const dppRatio = (bill?.taxBase && bill?.subtotal) ? bill.taxBase / bill.subtotal : 1;
+              const memberDpp = Math.round(claim.subtotal * dppRatio);
+              const hasTax = claim.taxShare > 0 && bill?.taxRate > 0;
+              const hasService = claim.serviceShare > 0 && bill?.serviceRate > 0;
+              if (!hasTax && !hasService) return null;
+              return (
+                <div className="mt-1 pt-1 space-y-0.5">
+                  <div className="flex justify-between text-xs py-0.5 text-gray-400">
+                    <span>Subtotal item</span>
+                    <span>{formatIDR(claim.subtotal)}</span>
+                  </div>
+                  {dppRatio < 1 && (
+                    <div className="flex justify-between text-xs py-0.5 text-gray-400">
+                      <span>DPP (basis pajak/service)</span>
+                      <span>{formatIDR(memberDpp)}</span>
+                    </div>
+                  )}
+                  {hasTax && (
+                    <div className="flex justify-between text-xs py-0.5 text-gray-500">
+                      <span>Pajak ({bill.taxRate}% × {formatIDR(memberDpp)})</span>
+                      <span>{formatIDR(claim.taxShare)}</span>
+                    </div>
+                  )}
+                  {hasService && (
+                    <div className="flex justify-between text-xs py-0.5 text-gray-500">
+                      <span>Service ({bill.serviceRate}% × {formatIDR(memberDpp)})</span>
+                      <span>{formatIDR(claim.serviceShare)}</span>
+                    </div>
+                  )}
+                  {!hasTax && !hasService && (claim.taxShare > 0 || claim.serviceShare > 0) && (
+                    <div className="flex justify-between text-xs py-0.5 text-gray-500">
+                      <span>Pajak & layanan</span>
+                      <span>{formatIDR((claim.taxShare || 0) + (claim.serviceShare || 0))}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             <div className="flex justify-between font-bold text-gray-800 pt-2 border-t">
               <span>Total</span>
