@@ -3,7 +3,10 @@ const states = {
   identified: { label: 'Bergabung', color: 'bg-blue-100 text-blue-700' },
   selecting: { label: 'Memilih', color: 'bg-purple-100 text-purple-700' },
   confirmed: { label: 'Konfirmasi', color: 'bg-green-100 text-green-700' },
-  paid: { label: 'Sudah Bayar', color: 'bg-gray-100 text-gray-700' },
+  billed: { label: 'Ditagih', color: 'bg-orange-100 text-orange-700' },
+  order_confirmed: { label: 'Pesan OK', color: 'bg-green-100 text-green-700' },
+  transfer_confirmed: { label: 'Lunas', color: 'bg-emerald-100 text-emerald-700' },
+  paid: { label: 'Sudah Bayar', color: 'bg-emerald-100 text-emerald-700' },
 };
 
 export default function StatusBadge({ state }) {

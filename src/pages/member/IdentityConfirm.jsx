@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { lockMemberIdentity } from '../../firebase/locks.js';
 import { updateMember, getBill } from '../../firebase/bills.js';
 import { auth } from '../../firebase/config.js';
@@ -9,7 +9,7 @@ export default function IdentityConfirm({ member, billId, onStateChange }) {
   const [error, setError] = useState('');
   const [billTitle, setBillTitle] = useState('');
 
-  useState(() => {
+  useEffect(() => {
     getBill(billId).then(b => b && setBillTitle(b.title));
   }, [billId]);
 
