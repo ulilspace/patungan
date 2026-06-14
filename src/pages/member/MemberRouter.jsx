@@ -20,23 +20,38 @@ export default function MemberRouter() {
   const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => {
+    let unsubBill = null;
+    let unsubClaims = null;
+
     async function init() {
+      // Auth MUST complete before any Firestore read
       await signInAnonymously(auth);
+
+      // Now set up bill subscription (auth token is ready)
+      unsubBill = subscribeBill(billId, (data) => {
+        setBill(data);
+        setBillReady(true);
+      });
+
       const m = await getMemberByToken(billId, memberToken);
       setMember(m);
       setLoading(false);
-    }
-    init();
-  }, [billId, memberToken]);
 
-  useEffect(() => {
-    if (!billId) return;
-    const unsub = subscribeBill(billId, (data) => {
-      setBill(data);
-      setBillReady(true);
-    });
-    return unsub;
-  }, [billId]);
+      if (!m) return;
+
+      // Subscribe to claims; always fires (empty array for non-individual) → claimsReady
+      unsubClaims = subscribeClaims(billId, m.id, (data) => {
+        setClaims(data);
+        setClaimsReady(true);
+      });
+    }
+
+    init();
+    return () => {
+      if (unsubBill) unsubBill();
+      if (unsubClaims) unsubClaims();
+    };
+  }, [billId, memberToken]);
 
   // Re-fetch member periodically to detect state changes from host actions
   useEffect(() => {
@@ -48,19 +63,8 @@ export default function MemberRouter() {
     return () => clearInterval(interval);
   }, [billId, memberToken]);
 
-  // Subscribe to claims only for individual bills once member is loaded
-  useEffect(() => {
-    if (!billId || !member?.id) return;
-    if (bill && bill.billType !== 'individual') { setClaimsReady(true); return; }
-    const unsub = subscribeClaims(billId, member.id, data => {
-      setClaims(data);
-      setClaimsReady(true);
-    });
-    return unsub;
-  }, [billId, member?.id, bill?.billType]);
-
-  if (loading || !billReady || (bill?.billType === 'individual' && !claimsReady)) return (
-    <div className="min-h-screen flex items-center justify-center">
+  if (loading || !billReady || !claimsReady) return (
+    <div className="min-h-screen bg-amber-50 flex items-center justify-center">
       <div className="text-center">
         <div className="text-4xl mb-3">🧾</div>
         <p className="text-gray-500">Memuat...</p>
@@ -69,7 +73,7 @@ export default function MemberRouter() {
   );
 
   if (!member) return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <div className="min-h-screen bg-amber-50 flex items-center justify-center p-6">
       <div className="text-center">
         <div className="text-4xl mb-3">❌</div>
         <p className="text-red-500 font-medium">Link tidak valid</p>
