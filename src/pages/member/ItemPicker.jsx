@@ -9,10 +9,19 @@ export default function ItemPicker({ member, billId, bill, onStateChange, onClai
   const { items } = useItems(billId);
   const { members } = useMembers(billId);
   const [selected, setSelected] = useState(new Set());
+  const [initialized, setInitialized] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
   const [claiming, setClaiming] = useState(null);
   const [paidItemIds, setPaidItemIds] = useState(new Set());
+
+  // On first items load, restore any items already claimed by this member
+  useEffect(() => {
+    if (initialized || items.length === 0) return;
+    const mine = items.filter(i => i.claimedBy === member.id).map(i => i.id);
+    if (mine.length > 0) setSelected(new Set(mine));
+    setInitialized(true);
+  }, [items, member.id, initialized]);
 
   useEffect(() => {
     if (bill?.billType !== 'individual') return;
