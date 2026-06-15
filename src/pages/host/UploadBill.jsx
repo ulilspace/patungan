@@ -56,6 +56,8 @@ export default function UploadBill() {
             serviceRate: parsed.serviceRate || 0,
             serviceBase: parsed.serviceBase || 0,
             grandTotal: parsed.grandTotal || 0,
+            discount: parsed.discount || 0,
+            discountLabel: parsed.discountLabel || '',
           };
           // Upload receipt image to Firebase Storage
           if (billId && imageFile) {

@@ -19,6 +19,8 @@ export default function ReviewBill() {
   const [serviceRate] = useState(parsed?.serviceRate || 0);
   const [serviceBase] = useState(parsed?.serviceBase || 0);
   const [grandTotal, setGrandTotal] = useState(parsed?.grandTotal || 0);
+  const [discount, setDiscount] = useState(parsed?.discount || 0);
+  const [discountLabel, setDiscountLabel] = useState(parsed?.discountLabel || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -53,7 +55,9 @@ export default function ReviewBill() {
         serviceRate: Number(serviceRate),
         serviceBase: Number(serviceBase),
         subtotal,
-        grandTotal: Number(grandTotal) || subtotal + Number(tax) + Number(serviceCharge),
+        discount: Number(discount) || 0,
+        discountLabel: discountLabel || '',
+        grandTotal: Number(grandTotal) || subtotal - Number(discount) + Number(tax) + Number(serviceCharge),
       };
       if (parsed?.receiptImageUrl) {
         billData.receiptImageUrl = parsed.receiptImageUrl;
@@ -122,6 +126,22 @@ export default function ReviewBill() {
                 className="w-32 border rounded px-2 py-1 text-right text-sm"
                 value={serviceCharge}
                 onChange={e => setServiceCharge(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-between text-sm items-center gap-2">
+              <input
+                type="text"
+                className="flex-1 border rounded px-2 py-1 text-sm text-gray-600"
+                placeholder="Label diskon (cth: Promo BCA)"
+                value={discountLabel}
+                onChange={e => setDiscountLabel(e.target.value)}
+              />
+              <input
+                type="number"
+                className="w-32 border rounded px-2 py-1 text-right text-sm text-red-600"
+                placeholder="0"
+                value={discount}
+                onChange={e => setDiscount(e.target.value)}
               />
             </div>
             <div className="flex justify-between text-sm items-center font-bold border-t pt-2">
