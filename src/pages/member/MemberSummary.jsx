@@ -61,20 +61,28 @@ export default function MemberSummary({ member, billId, bill, claims, onNewClaim
               </div>
             ))}
 
-            {/* Tax/service breakdown */}
+            {/* Breakdown: discount, tax, service */}
             {(() => {
               const dppRatio = (bill?.taxBase && bill?.subtotal) ? bill.taxBase / bill.subtotal : 1;
-              const memberDpp = Math.round(claim.subtotal * dppRatio);
+              const effectiveSubtotal = claim.subtotal - (claim.discountShare || 0);
+              const memberDpp = Math.round(effectiveSubtotal * dppRatio);
+              const hasDiscount = (claim.discountShare || 0) > 0;
               const hasTax = claim.taxShare > 0 && bill?.taxRate > 0;
               const hasService = claim.serviceShare > 0 && bill?.serviceRate > 0;
-              if (!hasTax && !hasService) return null;
+              if (!hasDiscount && !hasTax && !hasService) return null;
               return (
                 <div className="mt-1 pt-1 space-y-0.5">
                   <div className="flex justify-between text-xs py-0.5 text-gray-400">
                     <span>Subtotal item</span>
                     <span>{formatIDR(claim.subtotal)}</span>
                   </div>
-                  {dppRatio < 1 && (
+                  {hasDiscount && (
+                    <div className="flex justify-between text-xs py-0.5 text-green-600">
+                      <span>{bill?.discountLabel || 'Diskon'}</span>
+                      <span>−{formatIDR(Math.round(claim.discountShare))}</span>
+                    </div>
+                  )}
+                  {dppRatio < 1 && (hasTax || hasService) && (
                     <div className="flex justify-between text-xs py-0.5 text-gray-400">
                       <span>DPP (basis pajak/service)</span>
                       <span>{formatIDR(memberDpp)}</span>

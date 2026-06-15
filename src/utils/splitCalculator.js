@@ -1,10 +1,14 @@
 export function calcExtrasForSubtotal(bill, subtotal) {
-  // DPP ratio: some items may be excluded from tax/service on the receipt.
-  // taxBase (DPP) is derived by Claude as: tax / (taxRate/100).
-  // We apply the same ratio to each member's subtotal so the split is accurate.
   const billSubtotal = bill.subtotal || 0;
+
+  // Discount applied proportionally to each member's subtotal
+  const discountRatio = (bill.discount && billSubtotal > 0) ? bill.discount / billSubtotal : 0;
+  const memberDiscount = subtotal * discountRatio;
+  const effectiveSubtotal = subtotal - memberDiscount;
+
+  // DPP ratio for tax/service (based on effective subtotal after discount)
   const dppRatio = (bill.taxBase && billSubtotal > 0) ? bill.taxBase / billSubtotal : 1;
-  const memberDpp = subtotal * dppRatio;
+  const memberDpp = effectiveSubtotal * dppRatio;
 
   let tax = 0, service = 0;
   if (bill.taxRate > 0) {
@@ -21,7 +25,7 @@ export function calcExtrasForSubtotal(bill, subtotal) {
     const ratio = billSubtotal > 0 ? subtotal / billSubtotal : 0;
     service = (bill.serviceCharge || 0) * ratio;
   }
-  return { tax, service, total: tax + service };
+  return { discount: memberDiscount, tax, service, total: -memberDiscount + tax + service };
 }
 
 export function calculateSplit(bill, items, members, selections) {
@@ -51,8 +55,7 @@ export function calculateSplit(bill, items, members, selections) {
 
   const results = Object.values(memberMap).map(m => {
     const extras = calcExtrasForSubtotal(bill, m.itemsTotal);
-    const extraShare = extras.total;
-    return { ...m, extraShare, total: m.itemsTotal + extraShare };
+    return { ...m, discountShare: extras.discount, extraShare: extras.total, total: m.itemsTotal + extras.total };
   });
 
   const calculatedTotal = results.reduce((s, m) => s + m.total, 0);

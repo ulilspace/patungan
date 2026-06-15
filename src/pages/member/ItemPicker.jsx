@@ -85,6 +85,7 @@ export default function ItemPicker({ member, billId, bill, onStateChange, onClai
         await saveClaim(billId, member.id, {
           items: claimedItems,
           subtotal,
+          discountShare: extras.discount,
           taxShare: extras.tax,
           serviceShare: extras.service,
           total: subtotal + extras.total,
@@ -101,10 +102,12 @@ export default function ItemPicker({ member, billId, bill, onStateChange, onClai
     }
   }
 
-  const total = [...selected].reduce((s, id) => {
+  const subtotalSelected = [...selected].reduce((s, id) => {
     const item = items.find(i => i.id === id);
     return s + (item?.price || 0);
   }, 0);
+  const extrasPreview = bill ? calcExtrasForSubtotal(bill, subtotalSelected) : { total: 0 };
+  const total = subtotalSelected + extrasPreview.total;
 
   const sortedItems = [...items].sort((a, b) => a.name.localeCompare(b.name));
 
